@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tesla Coil Simulator — Samriddha Guragain</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --green:  #00ff8c;
+    --cyan:   #00eeff;
+    --orange: #ff9500;
+    --red:    #ff4444;
+    --yellow: #ffdd00;
+    --purple: #cc88ff;
+    --mint:   #88ffcc;
+    --bg:     #02040a;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--green);
+    font-family: 'Share Tech Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: fadeInUp 0.4s ease;
+  }
+
+  #header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    border-bottom: 1px solid rgba(0,255,140,0.1);
+    background: rgba(0,255,140,0.02);
+    animation: flicker 10s infinite;
+    flex-shrink: 0;
+  }
+  #header h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    font-size: 16px;
+    letter-spacing: 4px;
+    color: var(--cyan);
+    text-shadow: 0 0 20px rgba(0,238,255,0.5);
+  }
+  #header p { font-size: 9px; color: rgba(0,255,140,0.25); letter-spacing: 2px; margin-top: 3px; }
+  #header-right { text-align: right; font-size: 9px; line-height: 1.8; color: rgba(255,149,0,0.5); }
+
+  #body { display: flex; flex: 1; overflow: hidden; }
+
+  #canvas-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    gap: 10px;
+  }
+
+  canvas { border: 1px solid rgba(0,255,140,0.08); border-radius: 3px; display: block; }
+
+  #graph-wrap {
+    width: 460px;
+    background: #02040a;
+    border: 1px solid rgba(0,255,140,0.08);
+    border-radius: 3px;
+    padding: 10px 12px 8px;
+  }
+  #graph-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  #graph-title { font-size: 8px; letter-spacing: 2px; color: rgba(0,255,140,0.4); }
+  #graph-readout { font-size: 9px; color: var(--cyan); }
+  #wire-calc {
+    width: 460px;
+    background: rgba(0,255,140,0.02);
+    border: 1px solid rgba(0,255,140,0.08);
+    border-radius: 3px;
+    padding: 8px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .wire-label { font-size: 7px; color: rgba(0,255,140,0.3); letter-spacing: 1px; margin-bottom: 3px; }
+  .wire-val   { font-size: 11px; font-weight: bold; }
+  .wire-item  { display: flex; flex-direction: column; align-items: center; }
+
+  #panel {
+    width: 280px;
+    border-left: 1px solid rgba(0,255,140,0.08);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  #energize-btn {
+    margin: 14px 16px 0;
+    width: calc(100% - 32px);
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 3px;
+    padding: 12px;
+    background: rgba(0,238,255,0.06);
+    border: 1px solid rgba(0,238,255,0.5);
+    color: var(--cyan);
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.3s;
+  }
+  #energize-btn.running {
+    background: rgba(255,68,68,0.08);
+    border-color: rgba(255,68,68,0.6);
+    color: var(--red);
+    animation: pulseGlow 2s infinite;
+  }
+
+  #status-row {
+    display: flex; align-items: center; gap: 6px;
+    margin: 10px 16px 0;
+    font-size: 9px; letter-spacing: 1px;
+    color: rgba(0,255,140,0.25);
+  }
+  #status-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #333; flex-shrink: 0; transition: all 0.3s;
+  }
+
+  #intensity-wrap { margin: 8px 16px 14px; display: none; }
+  #intensity-wrap.visible { display: block; }
+  #intensity-label { font-size: 8px; color: rgba(0,255,140,0.25); letter-spacing: 1px; margin-bottom: 4px; }
+  #intensity-track { height: 3px; background: #0a1a0a; border-radius: 2px; }
+  #intensity-bar { height: 100%; width: 0%; background: var(--cyan); border-radius: 2px; transition: width 0.3s, background 0.3s; box-shadow: 0 0 6px currentColor; background: white;}
+
+  #tabs { display: flex; border-bottom: 1px solid rgba(0,255,140,0.08); }
+  .tab-btn {
+    flex: 1; padding: 8px; font-size: 8px; letter-spacing: 2px;
+    font-family: 'Share Tech Mono', monospace;
+    background: transparent; border: none;
+    border-bottom: 1px solid transparent;
+    color: rgba(0,255,140,0.3); cursor: pointer;
+    text-transform: uppercase; margin-bottom: -1px; transition: all 0.2s;
+  }
+  .tab-btn.active { background: rgba(0,255,140,0.05); border-bottom-color: var(--green); color: var(--green); }
+
+  .tab-pane { display: none; padding: 14px 16px; overflow-y: auto; flex: 1; }
+  .tab-pane.active { display: flex; flex-direction: column; gap: 16px; }
+
+  .ctrl { display: flex; flex-direction: column; gap: 5px; }
+  .ctrl-row { display: flex; justify-content: space-between; align-items: center; }
+  .ctrl-label { font-size: 8px; color: rgba(0,255,140,0.4); letter-spacing: 1px; }
+  .ctrl-val { font-size: 11px; font-weight: bold; }
+
+  input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 3px;
+    background: rgba(0,255,140,0.2); outline: none;
+    cursor: pointer; border-radius: 1px;
+    margin: 4px 0;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px; height: 12px; border-radius: 50%;
+    cursor: pointer; transition: transform 0.15s;
+    box-shadow: 0 0 6px currentColor;
+    background: white;
+  }
+  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.4); }
+
+  .metric-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 7px 0; border-bottom: 1px solid rgba(0,255,140,0.05);
+  }
+  .metric-label { font-size: 8px; color: rgba(0,255,140,0.3); letter-spacing: 1px; }
+  .metric-val { font-size: 12px; font-weight: bold; }
+
+  .eqs {
+    margin-top: 10px; font-size: 8px;
+    color: rgba(0,255,140,0.15); line-height: 2;
+    border-top: 1px solid rgba(0,255,140,0.05); padding-top: 12px;
+  }
+  .eqs-title { color: rgba(0,255,140,0.35); margin-bottom: 6px; letter-spacing: 1px; }
+
+  .quote-box {
+    margin-top: 12px; padding: 10px;
+    background: rgba(0,238,255,0.03);
+    border: 1px solid rgba(0,238,255,0.08);
+    border-radius: 2px; font-size: 8px;
+    color: rgba(0,238,255,0.25); line-height: 1.9; font-style: italic;
+  }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(0,255,140,0.15); border-radius: 2px; }
+
+  @keyframes flicker {
+    0%,89%,91%,96%,100% { opacity:1; }
+    90% { opacity:0.75; } 95% { opacity:0.88; }
+  }
+  @keyframes pulseGlow {
+    0%,100% { box-shadow:0 0 8px rgba(255,68,68,0.3); }
+    50%      { box-shadow:0 0 20px rgba(255,68,68,0.7),0 0 40px rgba(255,68,68,0.15); }
+  }
+  @keyframes fadeInUp {
+    from { opacity:0; transform:translateY(8px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div>
+    <h1>TESLA COIL SIMULATOR</h1>
+    <p>RESONANT LC CIRCUIT VISUALIZER &nbsp;·&nbsp; OPEN SOURCE &nbsp;·&nbsp; SAMRIDDHA GURAGAIN</p>
+  </div>
+  <div id="header-right">
+    JHAPA, NEPAL<br>
+    <span style="color:rgba(255,149,0,0.3)">3 ATTEMPTS · 1 WORKING COIL</span>
+  </div>
+</div>
+
+<div id="body">
+  <div id="canvas-wrap">
+    <canvas id="c" width="460" height="420"></canvas>
+
+    <div id="graph-wrap">
+      <div id="graph-header">
+        <span id="graph-title">FREQUENCY RESPONSE — RESONANCE CURVE</span>
+        <span id="graph-readout">f₀ = —</span>
+      </div>
+      <canvas id="graph-canvas" width="436" height="75"></canvas>
+    </div>
+
+    <div id="wire-calc">
+      <div class="wire-item"><div class="wire-label">PRIMARY WIRE</div><div class="wire-val" id="w-primary" style="color:#ff9500">— m</div></div>
+      <div class="wire-item"><div class="wire-label">SECONDARY WIRE</div><div class="wire-val" id="w-secondary" style="color:#00c8ff">— m</div></div>
+      <div class="wire-item"><div class="wire-label">WIRE DIA</div><div class="wire-val" id="w-diameter" style="color:#88ffcc">— mm</div></div>
+      <div class="wire-item"><div class="wire-label">COIL HEIGHT</div><div class="wire-val" id="w-height" style="color:#ffdd00">— cm</div></div>
+      <div class="wire-item"><div class="wire-label">SECONDARY L</div><div class="wire-val" id="w-inductance" style="color:#cc88ff">— mH</div></div>
+    </div>
+  </div>
+
+  <div id="panel">
+    <button id="energize-btn">▶&nbsp; ENERGIZE</button>
+
+    <div id="status-row">
+      <div id="status-dot"></div>
+      <span id="status-text">STANDBY</span>
+    </div>
+
+    <div id="intensity-wrap">
+      <div id="intensity-label">SPARK INTENSITY</div>
+      <div id="intensity-track"><div id="intensity-bar"></div></div>
+    </div>
+
+    <div id="tabs">
+      <button class="tab-btn active" data-tab="params">PARAMETERS</button>
+      <button class="tab-btn"        data-tab="physics">PHYSICS</button>
+    </div>
+
+    <div id="tab-params" class="tab-pane active">
+      <div class="ctrl" data-key="primaryTurns"   data-unit="T"   data-color="#ff9500">
+        <div class="ctrl-row"><span class="ctrl-label">PRIMARY TURNS</span>   <span class="ctrl-val" style="color:#ff9500">5T</span></div>
+        <input type="range" min="3"    max="15"    step="1"    value="5"    style="accent-color:#ff9500">
+      </div>
+      <div class="ctrl" data-key="secondaryTurns" data-unit="T"   data-color="#00c8ff">
+        <div class="ctrl-row"><span class="ctrl-label">SECONDARY TURNS</span> <span class="ctrl-val" style="color:#00c8ff">800T</span></div>
+        <input type="range" min="100"  max="1500"  step="25"   value="800"  style="accent-color:#00c8ff">
+      </div>
+      <div class="ctrl" data-key="topCapacitance"  data-unit="pF"  data-color="#ffdd00">
+        <div class="ctrl-row"><span class="ctrl-label">TOP CAPACITANCE</span> <span class="ctrl-val" style="color:#ffdd00">60pF</span></div>
+        <input type="range" min="10"   max="300"   step="5"    value="60"   style="accent-color:#ffdd00">
+      </div>
+      <div class="ctrl" data-key="couplingK"        data-unit=""    data-color="#cc88ff">
+        <div class="ctrl-row"><span class="ctrl-label">COUPLING k</span>      <span class="ctrl-val" style="color:#cc88ff">0.15</span></div>
+        <input type="range" min="0.05" max="0.65"  step="0.01" value="0.15" style="accent-color:#cc88ff">
+      </div>
+      <div class="ctrl" data-key="inputVoltage"     data-unit="V"   data-color="#ff9500">
+        <div class="ctrl-row"><span class="ctrl-label">INPUT VOLTAGE</span>   <span class="ctrl-val" style="color:#ff9500">9000V</span></div>
+        <input type="range" min="1000" max="50000" step="500"  value="9000" style="accent-color:#ff9500">
+      </div>
+      <div class="ctrl" data-key="sparkGapMM"       data-unit="mm"  data-color="#ff4444">
+        <div class="ctrl-row"><span class="ctrl-label">SPARK GAP</span>        <span class="ctrl-val" style="color:#ff4444">3mm</span></div>
+        <input type="range" min="0.5"  max="15"    step="0.5"  value="3"    style="accent-color:#ff4444">
+      </div>
+      <div class="ctrl" data-key="wireGauge"        data-unit="AWG" data-color="#88ffcc">
+        <div class="ctrl-row"><span class="ctrl-label">WIRE GAUGE</span>       <span class="ctrl-val" style="color:#88ffcc">22AWG</span></div>
+        <input type="range" min="18"   max="30"    step="1"    value="22"   style="accent-color:#88ffcc">
+      </div>
+    </div>
+
+    <div id="tab-physics" class="tab-pane">
+      <div>
+        <div class="metric-row"><span class="metric-label">RESONANT FREQ</span>    <span id="m-freq"  class="metric-val" style="color:#00eeff">—</span></div>
+        <div class="metric-row"><span class="metric-label">OUTPUT VOLTAGE</span>   <span id="m-volt"  class="metric-val" style="color:#ff9500">—</span></div>
+        <div class="metric-row"><span class="metric-label">VOLT MULTIPLIER</span>  <span id="m-mult"  class="metric-val" style="color:#ffdd00">—</span></div>
+        <div class="metric-row"><span class="metric-label">SPARK THRESHOLD</span>  <span id="m-break" class="metric-val" style="color:#ff4444">—</span></div>
+        <div class="metric-row"><span class="metric-label">QUALITY FACTOR Q</span><span id="m-q"     class="metric-val" style="color:#cc88ff">—</span></div>
+        <div class="metric-row"><span class="metric-label">SKIN DEPTH δ</span>     <span id="m-skin"  class="metric-val" style="color:#88ffcc">—</span></div>
+        <div class="metric-row"><span class="metric-label">COIL RESISTANCE</span>  <span id="m-res"   class="metric-val" style="color:#aaaaaa">—</span></div>
+      </div>
+      <div class="eqs">
+        <div class="eqs-title">EQUATIONS</div>
+        f = 1 / (2π√LC)<br>
+        V_out = V_in · (Ns/Np) · k<br>
+        V_bd ≈ 3 kV/mm (air, STP)<br>
+        Q = ωL / R<br>
+        δ = √(ρ / πfμ)
+      </div>
+      <div class="quote-box">
+        "Got shocked too much and too<br>
+        frequently on attempt two.<br>
+        Built it anyway. Third time —<br>
+        the bulb glowed."<br>
+        <span style="color:rgba(0,238,255,0.15)">— Grade 9, Jhapa, Nepal</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const P = {
+  primaryTurns:5, secondaryTurns:800, topCapacitance:60,
+  couplingK:0.15, inputVoltage:9000, sparkGapMM:3, wireGauge:22,
+  secondaryInductance:35000,
+};
+let running=false, frame=0, animId=null;
+const particles=[];
+
+// Physics
+function resonantFreq(L,C){ return (L>0&&C>0)?1/(2*Math.PI*Math.sqrt(L*1e-6*C*1e-12)):0; }
+function voltMult(Np,Ns,k){ return (Ns/Np)*k*0.92; }
+function breakKV(g){ return g*3.0; }
+function coilR(t,awg){ const d=0.127*Math.pow(92,(36-awg)/39)/1000; return (1.68e-8*t*0.15)/(Math.PI*(d/2)**2); }
+function skinD(f){ return f>0?Math.sqrt(1.68e-8/(Math.PI*f*4e-7))*1000:999; }
+function qualF(L,C,R){ const w=2*Math.PI*resonantFreq(L,C); return R>0?Math.min((w*L*1e-6)/R,9999):9999; }
+
+function getM(){
+  const freq=resonantFreq(P.secondaryInductance,P.topCapacitance);
+  const mult=voltMult(P.primaryTurns,P.secondaryTurns,P.couplingK);
+  const outV=P.inputVoltage*mult, outKV=outV/1000;
+  const breakKv=breakKV(P.sparkGapMM), sparking=outKV>breakKv;
+  const sparkI=sparking?Math.min((outKV-breakKv)/100,1):0;
+  const R=coilR(P.secondaryTurns,P.wireGauge);
+  return {freq,mult,outV,outKV,breakKv,sparking,sparkI,R,
+    Q:qualF(P.secondaryInductance,P.topCapacitance,R),delta:skinD(freq)};
+}
+
+function fmtF(f){ return f>=1e6?`${(f/1e6).toFixed(3)} MHz`:f>=1e3?`${(f/1e3).toFixed(1)} kHz`:`${f.toFixed(0)} Hz`; }
+function fmtV(v){ return v>=1e6?`${(v/1e6).toFixed(2)} MV`:v>=1e3?`${(v/1e3).toFixed(1)} kV`:`${v.toFixed(0)} V`; }
+
+// Canvas
+const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
+const W=canvas.width, H=canvas.height;
+const rand=(lo,hi)=>lo+Math.random()*(hi-lo);
+const lerp=(a,b,t)=>a+(b-a)*t;
+const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+
+function bolt(x1,y1,x2,y2,{s=12,j=20,col='#00eeff',a=0.9,lw=1.5,gl=15,br=0}={}){
+  const pts=[[x1,y1]];
+  for(let i=1;i<s;i++) pts.push([lerp(x1,x2,i/s)+rand(-j,j),lerp(y1,y2,i/s)+rand(-j,j)]);
+  pts.push([x2,y2]);
+  ctx.save(); ctx.globalAlpha=a; ctx.strokeStyle=col; ctx.lineWidth=lw;
+  ctx.shadowColor=col; ctx.shadowBlur=gl; ctx.lineJoin='round';
+  ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]);
+  pts.slice(1).forEach(([x,y])=>ctx.lineTo(x,y)); ctx.stroke();
+  ctx.strokeStyle='rgba(255,255,255,0.5)'; ctx.lineWidth=lw*0.3; ctx.shadowBlur=0;
+  ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]);
+  pts.slice(1).forEach(([x,y])=>ctx.lineTo(x,y)); ctx.stroke();
+  for(let b=0;b<br;b++){
+    const bi=Math.floor(rand(2,pts.length-2)), [bx,by]=pts[bi];
+    const ang=Math.atan2(y2-y1,x2-x1)+rand(-0.8,0.8), len=rand(20,55);
+    bolt(bx,by,bx+Math.cos(ang)*len,by+Math.sin(ang)*len,{s:5,j:7,col,a:a*0.5,lw:lw*0.5,gl:gl*0.4,br:0});
+  }
+  ctx.restore();
+}
+
+function toroid(cx,cy,Rx,Ry,rx,col,glow){
+  ctx.save();
+  for(let i=0;i<60;i++){
+    const th=(i/60)*Math.PI*2, x=cx+Rx*Math.cos(th), y=cy+Ry*Math.sin(th);
+    const r=rx*(0.7+0.3*Math.abs(Math.cos(th)));
+    const g=ctx.createRadialGradient(x,y,0,x,y,r);
+    g.addColorStop(0,col+'ff'); g.addColorStop(0.5,col+'77'); g.addColorStop(1,col+'00');
+    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+    ctx.fillStyle=g; ctx.globalAlpha=0.35+glow*0.4; ctx.fill();
+  }
+  ctx.globalAlpha=0.85+glow*0.15; ctx.strokeStyle=col; ctx.lineWidth=2.5;
+  ctx.shadowColor=col; ctx.shadowBlur=10+glow*30;
+  ctx.beginPath(); ctx.ellipse(cx,cy,Rx,Ry,0,0,Math.PI*2); ctx.stroke();
+  ctx.restore();
+}
+
+function helix(cx,cy,w,h,turns,col,lbl){
+  const total=turns*40;
+  ctx.save(); ctx.strokeStyle=col; ctx.lineWidth=1.6;
+  ctx.shadowColor=col; ctx.shadowBlur=7; ctx.globalAlpha=0.85;
+  let px=null,py=null;
+  for(let i=0;i<=total;i++){
+    const t=i/total, ang=t*turns*Math.PI*2;
+    const x=cx+(w/2)*Math.cos(ang), y=cy-h/2+h*t;
+    if(Math.cos(ang)>-0.2&&px!==null){ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(x,y);ctx.stroke();}
+    px=x; py=y;
+  }
+  ctx.globalAlpha=1; ctx.shadowBlur=0;
+  ctx.fillStyle=col+'99'; ctx.font="bold 10px 'Share Tech Mono'";
+  ctx.textAlign='center'; ctx.fillText(lbl,cx,cy-h/2-10);
+  ctx.restore();
+}
+
+function spawnP(cx,cy,si){
+  for(let i=0;i<Math.floor(3+si*7);i++){
+    const a=rand(0,Math.PI*2),sp=rand(0.5,3+si*3);
+    particles.push({x:cx,y:cy,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-rand(0,1.5),life:1,decay:rand(0.02,0.05),sz:rand(1,2.5)});
+  }
+}
+
+const CCX=W*0.42, PCY=H*0.78, SCY=H*0.52, TCY=H*0.18, TCX=W*0.42, GY=H*0.91;
+
+function draw(){
+  frame++;
+  const f=frame, m=getM();
+  ctx.fillStyle='#02040a'; ctx.fillRect(0,0,W,H);
+  const vig=ctx.createRadialGradient(W/2,H/2,H*0.2,W/2,H/2,H*0.9);
+  vig.addColorStop(0,'transparent'); vig.addColorStop(1,'rgba(0,0,0,0.65)');
+  ctx.fillStyle=vig; ctx.fillRect(0,0,W,H);
+
+  ctx.save(); ctx.strokeStyle='rgba(0,255,100,0.04)'; ctx.lineWidth=1;
+  for(let x=0;x<W;x+=25){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=0;y<H;y+=25){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+  ctx.restore();
+
+  ctx.save(); ctx.strokeStyle='#00ff8c'; ctx.lineWidth=2; ctx.shadowColor='#00ff8c'; ctx.shadowBlur=6;
+  for(let i=0;i<4;i++){const w=60-i*14;ctx.globalAlpha=1-i*0.22;ctx.beginPath();ctx.moveTo(CCX-w/2,GY+i*6);ctx.lineTo(CCX+w/2,GY+i*6);ctx.stroke();}
+  ctx.restore();
+
+  helix(CCX,PCY,90,55,P.primaryTurns,'#ff9500',`PRIMARY ${P.primaryTurns}T`);
+  helix(CCX,SCY,55,120,Math.min(P.secondaryTurns,28),'#00c8ff',`SECONDARY ${P.secondaryTurns}T`);
+
+  ctx.save(); ctx.strokeStyle='rgba(0,200,255,0.25)'; ctx.lineWidth=1.5; ctx.setLineDash([4,6]);
+  ctx.beginPath(); ctx.moveTo(CCX,SCY-62); ctx.lineTo(TCX,TCY+16); ctx.stroke();
+  ctx.setLineDash([]); ctx.restore();
+
+  const gp=running?0.5+0.5*Math.sin(f*0.08):0.1;
+  toroid(TCX,TCY,44,14,10,'#00eeff',gp*(m.sparking?m.sparkI:0.2));
+
+  if(running&&m.sparking){
+    for(let r=0;r<3;r++){
+      const age=((f+r*20)%60)/60, rad=age*110, alpha=(1-age)*0.14*m.sparkI;
+      ctx.save(); ctx.strokeStyle=`rgba(0,200,255,${alpha})`; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.ellipse(TCX,TCY,rad,rad*0.35,0,0,Math.PI*2); ctx.stroke(); ctx.restore();
+    }
+    const na=1+Math.floor(m.sparkI*5);
+    for(let i=0;i<na;i++){
+      if(Math.random()>0.4){
+        const ang=rand(-Math.PI*0.9,-Math.PI*0.1), len=rand(40,80+m.sparkI*120);
+        const ex=TCX+Math.cos(ang)*len, ey=TCY+Math.sin(ang)*len*0.7;
+        bolt(TCX+rand(-20,20),TCY,ex,ey,{s:10+Math.floor(m.sparkI*8),j:12+m.sparkI*20,col:'#00eeff',a:rand(0.5,0.95),lw:rand(0.8,1.8+m.sparkI),gl:12+m.sparkI*20,br:Math.random()>0.55?Math.floor(m.sparkI*3):0});
+        if(Math.random()>0.7) spawnP(ex,ey,m.sparkI);
+      }
+    }
+    if(Math.random()>0.97) bolt(TCX,TCY,CCX+rand(-15,15),GY,{s:20,j:25,col:'#ffffff',a:0.6,lw:2,gl:28,br:2});
+  }
+
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i]; p.x+=p.vx; p.y+=p.vy; p.vy+=0.05; p.life-=p.decay;
+    if(p.life<=0){particles.splice(i,1);continue;}
+    ctx.save(); ctx.globalAlpha=p.life; ctx.fillStyle='#00eeff'; ctx.shadowColor='#00eeff'; ctx.shadowBlur=4;
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.sz*p.life,0,Math.PI*2); ctx.fill(); ctx.restore();
+  }
+
+  const sgx=CCX-100, sgy=PCY-10, ge=sgx+4+P.sparkGapMM*1.5;
+  ctx.save(); ctx.strokeStyle='#ff4444'; ctx.lineWidth=2; ctx.shadowColor='#ff4444'; ctx.shadowBlur=6;
+  ctx.beginPath(); ctx.moveTo(sgx-18,sgy); ctx.lineTo(sgx-4,sgy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ge,sgy); ctx.lineTo(ge+16,sgy); ctx.stroke();
+  ctx.fillStyle='#ff4444';
+  ctx.beginPath(); ctx.arc(sgx-4,sgy,3,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(ge,sgy,3,0,Math.PI*2); ctx.fill();
+  if(running&&m.sparking&&Math.random()>0.3) bolt(sgx-4,sgy,ge,sgy,{s:5,j:5,col:'#ff6644',a:rand(0.6,1),lw:1.5,gl:12});
+  ctx.fillStyle='rgba(255,68,68,0.5)'; ctx.font="9px 'Share Tech Mono'"; ctx.textAlign='center';
+  ctx.fillText(`${P.sparkGapMM}mm`,sgx+P.sparkGapMM*0.75,sgy+18); ctx.restore();
+
+  const oy=H*0.965;
+  ctx.save(); ctx.strokeStyle='#00ff8c'; ctx.lineWidth=1.2;
+  ctx.shadowColor='#00ff8c'; ctx.shadowBlur=running?6:2; ctx.globalAlpha=0.65;
+  ctx.beginPath();
+  for(let x=0;x<=W-24;x++){
+    const t=x/(W-24), ph=t*Math.PI*12+f*(running?0.18:0);
+    const amp=running?(4+m.sparkI*10)*Math.sin(t*Math.PI):1.5;
+    x===0?ctx.moveTo(12+x,oy+Math.sin(ph)*amp):ctx.lineTo(12+x,oy+Math.sin(ph)*amp);
+  }
+  ctx.stroke(); ctx.restore();
+
+  if(running){
+    const pulse=0.5+0.5*Math.sin(f*0.15);
+    ctx.save();
+    ctx.fillStyle=m.sparking?`rgba(0,238,255,${0.6+pulse*0.4})`:`rgba(0,255,140,${0.4+pulse*0.3})`;
+    ctx.shadowColor=m.sparking?'#00eeff':'#00ff8c'; ctx.shadowBlur=10+pulse*10;
+    ctx.beginPath(); ctx.arc(W-16,16,5,0,Math.PI*2); ctx.fill(); ctx.restore();
+  }
+
+  updateUI(m);
+  animId=requestAnimationFrame(draw);
+}
+
+function updateUI(m){
+  document.getElementById('m-freq').textContent=fmtF(m.freq);
+  document.getElementById('m-volt').textContent=fmtV(m.outV);
+  document.getElementById('m-volt').style.color=m.sparking?'#ff4444':'#ff9500';
+  document.getElementById('m-mult').textContent=`${m.mult.toFixed(0)}×`;
+  document.getElementById('m-break').textContent=`${m.breakKv.toFixed(1)} kV`;
+  document.getElementById('m-q').textContent=m.Q.toFixed(0);
+  document.getElementById('m-skin').textContent=`${m.delta.toFixed(3)} mm`;
+  document.getElementById('m-res').textContent=`${(m.R*1000).toFixed(1)} mΩ`;
+  const dot=document.getElementById('status-dot');
+  const txt=document.getElementById('status-text');
+  const ibar=document.getElementById('intensity-bar');
+  const iwrap=document.getElementById('intensity-wrap');
+  if(!running){dot.style.background='#333';dot.style.boxShadow='none';txt.style.color='rgba(0,255,140,0.25)';txt.textContent='STANDBY';iwrap.classList.remove('visible');return;}
+  iwrap.classList.add('visible');
+  ibar.style.width=`${m.sparkI*100}%`;
+  ibar.style.background=m.sparkI>0.7?'#ff4444':m.sparkI>0.3?'#ff9500':'#00eeff';
+  if(m.sparking){dot.style.background='#00eeff';dot.style.boxShadow='0 0 8px #00eeff';txt.style.color='#00eeff';txt.textContent=`SPARKING · ${fmtV(m.outV)} OUTPUT`;}
+  else{dot.style.background='#00ff8c';dot.style.boxShadow='0 0 6px #00ff8c';txt.style.color='rgba(0,255,140,0.6)';txt.textContent='RUNNING · BELOW THRESHOLD';}
+}
+
+// Sliders
+document.querySelectorAll('.ctrl').forEach(el=>{
+  const key=el.dataset.key, unit=el.dataset.unit;
+  const input=el.querySelector('input'), label=el.querySelector('.ctrl-val');
+  input.addEventListener('input',()=>{ P[key]=parseFloat(input.value); label.textContent=`${input.value}${unit}`; });
+});
+
+// Button
+document.getElementById('energize-btn').addEventListener('click',function(){
+  running=!running;
+  if(running){ this.textContent='◼  SHUTDOWN'; this.classList.add('running'); animId=requestAnimationFrame(draw); }
+  else{ this.textContent='▶  ENERGIZE'; this.classList.remove('running'); cancelAnimationFrame(animId); draw(); cancelAnimationFrame(animId); }
+});
+
+// Tabs
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+  });
+});
+
+// Init
+draw(); cancelAnimationFrame(animId); updateUI(getM());
+
+// ─── Frequency Response Graph ─────────────────────────────────────────────────
+const gc = document.getElementById('graph-canvas');
+const gctx = gc.getContext('2d');
+const GW = gc.width, GH = gc.height;
+
+function drawFreqGraph() {
+  const m = getM();
+  gctx.clearRect(0, 0, GW, GH);
+
+  // Background
+  gctx.fillStyle = '#02040a';
+  gctx.fillRect(0, 0, GW, GH);
+
+  // Grid lines
+  gctx.strokeStyle = 'rgba(0,255,140,0.06)';
+  gctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = (i / 4) * GH;
+    gctx.beginPath(); gctx.moveTo(0, y); gctx.lineTo(GW, y); gctx.stroke();
+  }
+
+  // Resonance curve — Lorentzian shape
+  const f0 = m.freq;
+  const Q = Math.min(m.Q, 200);
+  const fMin = f0 * 0.3;
+  const fMax = f0 * 1.7;
+
+  gctx.beginPath();
+  gctx.strokeStyle = '#00eeff';
+  gctx.lineWidth = 1.5;
+  gctx.shadowColor = '#00eeff';
+  gctx.shadowBlur = 6;
+
+  for (let x = 0; x <= GW; x++) {
+    const f = fMin + (x / GW) * (fMax - fMin);
+    const denom = 1 + Q * Q * Math.pow((f / f0) - (f0 / f), 2);
+    const amp = 1 / denom;
+    const y = GH - amp * (GH - 6) - 3;
+    x === 0 ? gctx.moveTo(x, y) : gctx.lineTo(x, y);
+  }
+  gctx.stroke();
+  gctx.shadowBlur = 0;
+
+  // Fill under curve
+  gctx.beginPath();
+  for (let x = 0; x <= GW; x++) {
+    const f = fMin + (x / GW) * (fMax - fMin);
+    const denom = 1 + Q * Q * Math.pow((f / f0) - (f0 / f), 2);
+    const amp = 1 / denom;
+    const y = GH - amp * (GH - 6) - 3;
+    x === 0 ? gctx.moveTo(x, y) : gctx.lineTo(x, y);
+  }
+  gctx.lineTo(GW, GH); gctx.lineTo(0, GH); gctx.closePath();
+  gctx.fillStyle = 'rgba(0,238,255,0.04)';
+  gctx.fill();
+
+  // Peak line
+  const peakX = GW / 2;
+  gctx.strokeStyle = 'rgba(0,238,255,0.4)';
+  gctx.lineWidth = 1;
+  gctx.setLineDash([3, 4]);
+  gctx.beginPath(); gctx.moveTo(peakX, 0); gctx.lineTo(peakX, GH); gctx.stroke();
+  gctx.setLineDash([]);
+
+  // Spark threshold marker
+  if (m.sparking) {
+    gctx.fillStyle = 'rgba(255,68,68,0.15)';
+    gctx.fillRect(peakX - 20, 0, 40, GH);
+    gctx.fillStyle = '#ff444488';
+    gctx.font = "7px 'Share Tech Mono'";
+    gctx.textAlign = 'center';
+    gctx.fillText('SPARK', peakX, GH - 4);
+  }
+
+  // Bandwidth markers (half power points)
+  const bwX1 = GW * 0.5 - (GW * 0.4 / Q) * 10;
+  const bwX2 = GW * 0.5 + (GW * 0.4 / Q) * 10;
+  const bwX1c = Math.max(2, Math.min(GW - 2, bwX1));
+  const bwX2c = Math.max(2, Math.min(GW - 2, bwX2));
+  gctx.strokeStyle = 'rgba(255,221,0,0.3)';
+  gctx.lineWidth = 1;
+  gctx.setLineDash([2, 3]);
+  gctx.beginPath(); gctx.moveTo(bwX1c, 0); gctx.lineTo(bwX1c, GH); gctx.stroke();
+  gctx.beginPath(); gctx.moveTo(bwX2c, 0); gctx.lineTo(bwX2c, GH); gctx.stroke();
+  gctx.setLineDash([]);
+
+  // Axis labels
+  gctx.fillStyle = 'rgba(0,255,140,0.25)';
+  gctx.font = "7px 'Share Tech Mono'";
+  gctx.textAlign = 'left';
+  const fmtShort = f => f >= 1e6 ? `${(f/1e6).toFixed(1)}M` : f >= 1e3 ? `${(f/1e3).toFixed(0)}k` : `${f.toFixed(0)}`;
+  gctx.fillText(fmtShort(fMin) + 'Hz', 2, GH - 3);
+  gctx.textAlign = 'right';
+  gctx.fillText(fmtShort(fMax) + 'Hz', GW - 2, GH - 3);
+  gctx.textAlign = 'center';
+  gctx.fillStyle = 'rgba(0,238,255,0.5)';
+  gctx.fillText('f₀', peakX, 9);
+
+  // Update readout
+  document.getElementById('graph-readout').textContent =
+    `f₀ = ${fmtFreq(f0)}  ·  Q = ${Math.min(m.Q,9999).toFixed(0)}  ·  BW = ${fmtFreq(f0/Math.max(m.Q,1))}`;
+}
+
+// ─── Wire Length Calculator ───────────────────────────────────────────────────
+function updateWireCalc() {
+  // Wire diameter from AWG
+  const dia = 0.127 * Math.pow(92, (36 - P.wireGauge) / 39);
+
+  // Coil dimensions (assumed)
+  const primaryRadius = 0.045;   // 4.5cm radius
+  const secondaryRadius = 0.0275; // 2.75cm radius
+
+  const primaryCirc = 2 * Math.PI * primaryRadius;
+  const secondaryCirc = 2 * Math.PI * secondaryRadius;
+
+  const primaryLen = P.primaryTurns * primaryCirc;
+  const secondaryLen = P.secondaryTurns * secondaryCirc;
+
+  // Secondary coil height (turns * wire diameter + spacing)
+  const turnSpacing = dia * 1.1 / 1000;
+  const coilHeight = P.secondaryTurns * turnSpacing * 100; // in cm
+
+  // Wheeler's formula for secondary inductance (µH)
+  const r = secondaryRadius * 100; // cm
+  const l = coilHeight; // cm
+  const N = P.secondaryTurns;
+  const L_uH = (r * r * N * N) / (9 * r + 10 * l);
+  const L_mH = L_uH / 1000;
+
+  // Update P.secondaryInductance dynamically
+  P.secondaryInductance = L_uH;
+
+  document.getElementById('w-primary').textContent    = `${primaryLen.toFixed(1)}m`;
+  document.getElementById('w-secondary').textContent  = `${secondaryLen.toFixed(1)}m`;
+  document.getElementById('w-diameter').textContent   = `${dia.toFixed(2)}mm`;
+  document.getElementById('w-height').textContent     = `${coilHeight.toFixed(1)}cm`;
+  document.getElementById('w-inductance').textContent = `${L_mH.toFixed(1)}mH`;
+}
+
+// Hook into slider updates
+document.querySelectorAll('.ctrl input').forEach(input => {
+  input.addEventListener('input', () => {
+    updateWireCalc();
+    drawFreqGraph();
+  });
+});
+
+// Initial render
+updateWireCalc();
+drawFreqGraph();
+
+// Redraw graph on animation frame when running
+const origDraw = draw;
+setInterval(() => { drawFreqGraph(); updateWireCalc(); }, 500);
+</script>
+</body>
+</html>
