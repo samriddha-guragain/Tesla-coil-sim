@@ -2,7 +2,7 @@
 
 An interactive resonant LC circuit visualizer built in the browser — tune the parameters, hit energize, and watch the physics happen in real time.
 
-**[Try it live →](https://samriddha-guragain.github.io/tesla-coil-sim)**
+**[Try it live →](https://samriddha-guragain.github.io/Tesla-coil-sim)**
 
 ![Tesla Coil Simulator](docs/preview.png)
 
@@ -31,17 +31,17 @@ It's also an attempt to make resonant circuit physics accessible to anyone — n
 
 ## Parameters You Can Tune
 
-|   Parameter     | |                         Description                          |
-|-----------------| |--------------------------------------------------------------|
-| Primary Turns   | | Number of turns in the primary coil                          |
-| Secondary Turns | | Number of turns in the secondary coil                        |
-| Top Capacitance | | Capacitance of the top terminal (toroid) in pF               |
-| Coupling k      | | Magnetic coupling coefficient between coils                  |
-| Input Voltage   | | Voltage fed into the primary circuit                         |
-| Spark Gap       | | Distance between spark gap electrodes in mm                  |
-| Wire Gauge      | | AWG of secondary winding — affects resistance and skin depth |
+|   Parameter     | |                          Description                         |                                                                               
+|-------------    | |--------------------------------------------                  |                                                                           
+| Primary Turns   | | Number of turns in the primary coil                          |                                                                               
+| Secondary Turns | | Number of turns in the secondary coil                        |                                                                               
+| Top Capacitance | | Capacitance of the top terminal (toroid) in pF               |                                                                               
+| Coupling k      | | Magnetic coupling coefficient between coils                  |                                                                               
+| Input Voltage   | | Voltage fed into the primary circuit                         |                                                                               
+| Spark Gap       | | Distance between spark gap electrodes in mm                  |                                                                               
+| Wire Gauge      | | AWG of secondary winding — affects resistance and skin depth |                                                                               
 
-Arcs only fire when output voltage exceeds the spark gap breakdown threshold. That's not decoration — that's the actual condition.
+Arcs only fire when output voltage exceeds the spark gap breakdown threshold.
 
 ---
 
@@ -68,12 +68,12 @@ npm run dev
 
 ## Files
 
-tesla-coil-sim/
-├── index.html          ← standalone, runs in any browser
-├── src/
-│   └── TeslaCoilSim.jsx  ← React version
-├── docs/
-│   └── preview.png
+tesla-coil-sim/                                                                                                                                                    
+├── index.html          ← standalone, runs in any browser                                                                                                          
+├── src/                                                                                                                                                           
+│   └── TeslaCoilSim.jsx  ← React version                                                                                                                          
+├── docs/                                                                                                                                                          
+│   └── preview.png                                                                                                                                                
 └── README.md
 
 ---
@@ -88,11 +88,11 @@ tesla-coil-sim/
 
 ## Open Source
 
-Use it, fork it, learn from it. If you're a student trying to understand resonant circuits — this is for you.
+Use it, fork it, learn from it. If you're a student trying to understand resonant circuits, this is for you.
 
 If you find a physics error, open an issue. I want this to be accurate.
 
 ---
 
 *Built by [Samriddha Guragain](https://github.com/samriddha-guragain) — Jhapa, Nepal*
-*"Got shocked too much and too frequently on attempt two. Built it anyway."*
+*"Got shocked too much and too frequently. Built it anyway."*
