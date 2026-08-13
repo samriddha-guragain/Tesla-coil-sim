@@ -95,4 +95,4 @@ If you find a physics error, open an issue. I want this to be accurate.
 ---
 
 *Built by [Samriddha Guragain](https://github.com/samriddha-guragain) — Jhapa, Nepal*
-*"Got shocked too much and too frequently. Built it anyway."*
+*"HM. Claude"*
